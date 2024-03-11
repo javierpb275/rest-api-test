@@ -1,5 +1,7 @@
 import { Request } from "express";
 
+export type TokenType = "access" | "refresh";
+
 export interface IPayload {
   id: string;
   iat: number;
@@ -8,4 +10,5 @@ export interface IPayload {
 
 export interface IRequest extends Request {
   userId: string;
+  token: string;
 }

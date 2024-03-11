@@ -14,6 +14,16 @@ export class JWTLib {
     return token;
   };
 
+  public static verify = (token: string, secret: string): IPayload => {
+    const payload = jwt.verify(token, secret) as IPayload;
+    return payload;
+  };
+
+  public static decode = (token: string): IPayload => {
+    const payload = jwt.decode(token) as IPayload;
+    return payload;
+  };
+
   public static createAccessToken = (userId: string): string => {
     const token = JWTLib.generateToken(
       userId,
@@ -30,11 +40,6 @@ export class JWTLib {
       ApiConfig.AUTH.REFRESH_TOKEN_EXPIRATION
     );
     return token;
-  };
-
-  public static verify = (token: string, secret: string): IPayload => {
-    const payload = jwt.verify(token, secret) as IPayload;
-    return payload;
   };
 
   public static verifyAccessToken = (token: string): IPayload => {

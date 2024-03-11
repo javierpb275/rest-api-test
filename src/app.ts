@@ -1,5 +1,6 @@
 import cors from "cors";
 import express, { Application } from "express";
+import { UserRouter } from "./features/user/routers";
 
 class App {
   private app: Application;
@@ -20,7 +21,9 @@ class App {
     this.app.use(express.json());
   }
 
-  private routes(): void {}
+  private routes(): void {
+    this.app.use("/api/users", UserRouter);
+  }
 
   public start(): void {
     this.app.listen(this.app.get("port"), () => {

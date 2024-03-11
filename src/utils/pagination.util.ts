@@ -26,7 +26,11 @@ export class PaginationUtil {
       } else if (query[key] === "null") {
         query[key] = null;
       }
-      return (match[key] = query[key]);
+      if (typeof query[key] === "string") {
+        match[key] = new RegExp(`.*${query[key]}.*`, "i");
+      } else {
+        match[key] = query[key];
+      }
     });
     return match;
   };

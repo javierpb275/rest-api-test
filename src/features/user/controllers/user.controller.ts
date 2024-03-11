@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { BcryptLib, JWTLib } from "../../../libs";
-import { AuthUtil } from "../../../utils";
+import { AuthUtil, PaginationUtil } from "../../../utils";
 import { UserModel } from "../models";
 import { IUser } from "../types";
 
@@ -113,6 +113,22 @@ export class UserController {
       });
     } catch (err) {
       return res.status(400).send({ error: "Unable to sign in" });
+    }
+  }
+
+  //GET USERS
+  public static async getUsers(req: Request, res: Response): Promise<Response> {
+    const { query } = req;
+    const { limit, skip, sort } = PaginationUtil.getPaginationOptions(query);
+    const match = PaginationUtil.getMatch(query);
+    try {
+      const allUsers: IUser[] = await UserModel.find(match)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit);
+      return res.status(200).send(allUsers);
+    } catch (err) {
+      return res.status(500).send({ error: err });
     }
   }
 }

@@ -5,7 +5,7 @@ import { UserController } from "../controllers";
 const UserRouter: Router = Router();
 
 UserRouter.post(
-  "/refreshToken",
+  "/refresh",
   AuthMiddleware.JWT("refresh"),
   UserController.refreshToken
 );
@@ -16,6 +16,7 @@ UserRouter.post(
 );
 UserRouter.post("/", UserController.signUp);
 UserRouter.post("/signin", UserController.signIn);
+UserRouter.get("/", AuthMiddleware.JWT("access"), UserController.getUsers);
 
 export { UserRouter };
 

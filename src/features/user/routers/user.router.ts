@@ -7,15 +7,15 @@ const UserRouter: Router = Router();
 UserRouter.post(
   "/refresh",
   AuthMiddleware.JWT("refresh"),
-  UserController.refreshToken
+  UserController.postRefresh
 );
 UserRouter.post(
   "/signout",
   AuthMiddleware.JWT("refresh"),
-  UserController.signOut
+  UserController.postSignOut
 );
-UserRouter.post("/", UserController.signUp);
-UserRouter.post("/signin", UserController.signIn);
+UserRouter.post("/", UserController.postSignUp);
+UserRouter.post("/signin", UserController.postSignIn);
 UserRouter.get("/", AuthMiddleware.JWT("access"), UserController.getUsers);
 
 export { UserRouter };

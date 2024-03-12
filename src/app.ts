@@ -1,5 +1,6 @@
 import cors from "cors";
 import express, { Application } from "express";
+import { CampaignRouter } from "./features/campaign";
 import { UserRouter } from "./features/user/routers";
 
 class App {
@@ -23,6 +24,7 @@ class App {
 
   private routes(): void {
     this.app.use("/api/users", UserRouter);
+    this.app.use("/api/campaigns", CampaignRouter);
   }
 
   public start(): void {

@@ -26,6 +26,8 @@ export class PaginationUtil {
       } else if (query[key] === "null") {
         query[key] = null;
       }
+      // TODO: Review this method. If search writing just a number (ex: 1) this is not executed. And probably if write null or true/false it would not work either
+      // SUGGESTIONS: Leave just match[key] = new RegExp(`.*${query[key]}.*`, "i"); and maybe it works with any property. Another check if key === search...
       if (typeof query[key] === "string") {
         match[key] = new RegExp(`.*${query[key]}.*`, "i");
       } else {

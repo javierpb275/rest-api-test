@@ -1,18 +1,20 @@
 import { Request, Response } from "express";
 import { BcryptLib, JWTLib } from "../../../libs";
-import { AuthUtil, PaginationUtil } from "../../../utils";
+import { AuthUtil, CrudUtil } from "../../../utils";
 import { UserModel } from "../models";
 import { IUser } from "../types";
+
+// TODO: Move methods related to authentication to an AuthController.
 
 let refreshTokens: string[] = [];
 
 export class UserController {
-  //REFESH TOKEN
-  public static refreshToken = async (
+  // REFESH TOKEN
+  public static postRefresh = async (
     req: Request,
     res: Response
   ): Promise<Response> => {
-    const { userId, token } = AuthUtil.getAuthentication(req);
+    const { userId, token } = AuthUtil.castRequest(req);
     try {
       if (!token) {
         return res.status(400).send({ error: "Please, provide refresh token" });
@@ -33,9 +35,12 @@ export class UserController {
     }
   };
 
-  //SIGN OUT:
-  public static async signOut(req: Request, res: Response): Promise<Response> {
-    const { token } = AuthUtil.getAuthentication(req);
+  // SIGN OUT:
+  public static postSignOut = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
+    const { token } = AuthUtil.castRequest(req);
     if (!token) {
       return res.status(400).send({ error: "Please, provide refresh token" });
     }
@@ -48,10 +53,13 @@ export class UserController {
     } catch (err) {
       return res.status(500).send({ error: "Unable to sign out" });
     }
-  }
+  };
 
-  //SIGN UP:
-  public static async signUp(req: Request, res: Response): Promise<Response> {
+  // SIGN UP:
+  public static postSignUp = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     const newUser: IUser = new UserModel(req.body);
     try {
       const foundUser: IUser | null = await UserModel.findOne({
@@ -76,10 +84,13 @@ export class UserController {
     } catch (err) {
       return res.status(400).send({ error: err });
     }
-  }
+  };
 
-  //SIGN IN
-  public static async signIn(req: Request, res: Response): Promise<Response> {
+  // SIGN IN
+  public static postSignIn = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     if (!req.body.email || !req.body.password) {
       return res
         .status(400)
@@ -114,21 +125,11 @@ export class UserController {
     } catch (err) {
       return res.status(400).send({ error: "Unable to sign in" });
     }
-  }
+  };
 
-  //GET USERS
-  public static async getUsers(req: Request, res: Response): Promise<Response> {
-    const { query } = req;
-    const { limit, skip, sort } = PaginationUtil.getPaginationOptions(query);
-    const match = PaginationUtil.getMatch(query);
-    try {
-      const allUsers: IUser[] = await UserModel.find(match)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit);
-      return res.status(200).send(allUsers);
-    } catch (err) {
-      return res.status(500).send({ error: err });
-    }
-  }
+  // GET USERS
+  public static getUsers = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => CrudUtil.getMany({ req, res, model: "User" });
 }

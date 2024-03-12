@@ -8,6 +8,7 @@ export class PaginationUtil {
     return { limit, skip, sort };
   };
 
+  // ANOTHER SUGGESTION: ?search_username=pe or ?username=Pepe. find if key has search_ at the beginning.
   public static getMatch = (query: any): any => {
     const match: any = {};
     const keys: string[] = Object.keys(query);

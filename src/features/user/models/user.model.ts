@@ -5,10 +5,6 @@ import { IUser } from "../types";
 
 const userSchema = new mongoose.Schema<IUser>(
   {
-    search: {
-      type: String,
-      lowercase: true,
-    },
     email: {
       type: String,
       unique: true,
@@ -49,15 +45,13 @@ userSchema.methods.toJSON = function () {
   const user = this;
   const userObject = user.toObject();
   delete userObject.__v;
-  delete userObject._id;
+  delete userObject.id;
   delete userObject.password;
-  delete userObject.search;
   return userObject;
 };
 
 userSchema.pre<IUser>("save", async function (next) {
   const user: IUser = this;
-  user.search = `${user.username} ${user.email}`.toLowerCase();
   if (!user.isModified("password")) {
     return next();
   }

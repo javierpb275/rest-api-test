@@ -1,2 +1,3 @@
-export * from './campaign.mock';
-export * from './user.mock';
+export * from "./campaign.mock";
+export * from "./user.mock";
+

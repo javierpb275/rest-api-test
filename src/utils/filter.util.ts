@@ -74,7 +74,7 @@ export class FilterUtil {
   ) => {
     const filteredHeaders = this.getFilteredHeaders(headers, allowedProperties);
     const match: any = {};
-    this.setSearch(match, filteredHeaders)
+    this.setSearch(match, filteredHeaders);
     this.setDefaultValues(match, filteredHeaders);
     if (model === "User") {
       this.setUserValues(match, filteredHeaders);

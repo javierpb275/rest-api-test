@@ -137,13 +137,6 @@ export class UserController {
       res,
       model: "User",
       hasAuth: true,
-      filter: [
-        "username",
-        "email",
-        "search",
-        "_id",
-        "createdAt",
-        "updatedAt",
-      ],
+      filter: ["username", "email", "search", "_id", "createdAt", "updatedAt"],
     });
 }

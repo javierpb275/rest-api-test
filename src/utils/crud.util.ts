@@ -3,6 +3,7 @@ import { IUser, UserModel } from "../features/user";
 import { MongooseLib } from "../libs";
 import { CrudParams, ModelType } from "../types";
 import { AuthUtil } from "./auth.util";
+import { FilterUtil } from "./filter.util";
 import { PaginationUtil } from "./pagination.util";
 
 type AddToBody = {
@@ -26,11 +27,20 @@ export class CrudUtil {
     req,
     res,
     model,
+    filter = [],
+    hasAuth = false,
   }: CrudParams): Promise<Response> => {
-    const { query } = AuthUtil.castRequest(req);
+    const { userId, query, headers } = AuthUtil.castRequest(req);
+    let user: IUser | null = null;
     const { limit, skip, sort } = PaginationUtil.getPaginationOptions(query);
-    const match = PaginationUtil.getMatch(query);
+    const match = FilterUtil.getMatch(model, headers, filter);
     try {
+      if (hasAuth) {
+        user = await UserModel.findOne({ _id: userId });
+        if (!user) {
+          return res.status(404).send({ error: "User Not Found!" });
+        }
+      }
       const documents = await MongooseLib.findMany({
         model,
         params: { limit, match, skip, sort },
@@ -44,7 +54,7 @@ export class CrudUtil {
     req,
     res,
     model,
-    hasAuth,
+    hasAuth = false,
   }: CrudParams): Promise<Response> => {
     const { userId, body } = AuthUtil.castRequest(req);
     let user: IUser | null = null;
@@ -55,7 +65,7 @@ export class CrudUtil {
           return res.status(404).send({ error: "User Not Found!" });
         }
       }
-      CrudUtil.extraSteps(model, "postOne", body, { userId: user?._id });
+      this.extraSteps(model, "postOne", body, { userId: user?._id });
       const document = await MongooseLib.createOne({ model, body });
       return res.status(201).send(document);
     } catch (err) {

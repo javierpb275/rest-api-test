@@ -9,7 +9,8 @@ interface DefaultParams {
 export interface CrudParams extends DefaultParams {
   req: Request;
   res: Response;
-  hasAuth?: boolean
+  hasAuth?: boolean;
+  filter?: string[];
 }
 
 export interface PaginationParams {

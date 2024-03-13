@@ -131,5 +131,19 @@ export class UserController {
   public static getUsers = async (
     req: Request,
     res: Response
-  ): Promise<Response> => CrudUtil.getMany({ req, res, model: "User" });
+  ): Promise<Response> =>
+    CrudUtil.getMany({
+      req,
+      res,
+      model: "User",
+      hasAuth: true,
+      filter: [
+        "username",
+        "email",
+        "search",
+        "_id",
+        "createdAt",
+        "updatedAt",
+      ],
+    });
 }

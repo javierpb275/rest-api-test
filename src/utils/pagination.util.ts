@@ -8,33 +8,47 @@ export class PaginationUtil {
     return { limit, skip, sort };
   };
 
-  // ANOTHER SUGGESTION: ?search_username=pe or ?username=Pepe. find if key has search_ at the beginning.
-  public static getMatch = (query: any): any => {
+  private static createMatch = (query: any, keys: string[]): any => {
     const match: any = {};
-    const keys: string[] = Object.keys(query);
-    const filteredKeys: string[] = keys.filter((key) => {
-      return key !== "sort" && key !== "skip" && key !== "limit";
-    });
-    filteredKeys.forEach((key) => {
-      if (!isNaN(Number(query[key]))) {
-        query[key] = Number(query[key]);
-      } else if (query[key] === "true" || query[key] === "false") {
-        if (query[key] === "true") {
-          query[key] = true;
-        } else {
-          query[key] = false;
+    keys.forEach((key) => {
+      if (key.startsWith("str_") || key === "search") {
+        const str_ = key.replace(/^str_/, "");
+        match[str_] = new RegExp(`.*${query[key]}.*`, "i");
+      } else if (key.startsWith("num_") && !isNaN(Number(query[key]))) {
+        const num_ = key.replace(/^num_/, "");
+        match[num_] = Number(query[key]);
+      } else if (key.startsWith("bool_")) {
+        const bool_ = key.replace(/^bool_/, "");
+        if (query[key].toLowerCase() === "true") {
+          match[bool_] = true;
+        } else if (query[key].toLowerCase() === "false") {
+          match[bool_] = false;
         }
-      } else if (query[key] === "null") {
-        query[key] = null;
-      }
-      // TODO: Review this method. If search writing just a number (ex: 1) this is not executed. And probably if write null or true/false it would not work either
-      // SUGGESTIONS: Leave just match[key] = new RegExp(`.*${query[key]}.*`, "i"); and maybe it works with any property. Another check if key === search...
-      if (typeof query[key] === "string") {
-        match[key] = new RegExp(`.*${query[key]}.*`, "i");
+      } else if (
+        key.startsWith("null_") &&
+        query[key].toLowerCase() === "null"
+      ) {
+        const null_ = key.replace(/^null_/, "");
+        match[null_] = null;
+      } else if (
+        key.startsWith("undef_") &&
+        query[key].toLowerCase() === "undefined"
+      ) {
+        const undef_ = key.replace(/^undef_/, "");
+        match[undef_] = undefined;
       } else {
         match[key] = query[key];
       }
     });
+    return match;
+  };
+
+  public static getMatch = (query: any): any => {
+    const keys: string[] = Object.keys(query);
+    const filteredKeys: string[] = keys.filter((key) => {
+      return key !== "sort" && key !== "skip" && key !== "limit";
+    });
+    const match = PaginationUtil.createMatch(query, filteredKeys);
     return match;
   };
 

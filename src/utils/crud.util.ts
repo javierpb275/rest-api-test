@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { IUser, UserModel } from "../features/user";
-import { MongooseLib } from "../libs";
+import { GraphqlLib, MongooseLib } from "../libs";
 import { CrudParams, ModelType } from "../types";
 import { AuthUtil } from "./auth.util";
 import { FilterUtil } from "./filter.util";
@@ -32,7 +32,10 @@ export class CrudUtil {
   }: CrudParams): Promise<Response> => {
     const { userId, query, headers } = AuthUtil.castRequest(req);
     let user: IUser | null = null;
-    const { limit, skip, sort } = PaginationUtil.getPaginationOptions(query);
+    const { limit, skip, sort } = PaginationUtil.getPaginationOptions(
+      headers,
+      filter
+    );
     const match = FilterUtil.getMatch(model, headers, filter);
     try {
       if (hasAuth) {
@@ -41,11 +44,20 @@ export class CrudUtil {
           return res.status(404).send({ error: "User Not Found!" });
         }
       }
+      /*
       const documents = await MongooseLib.findMany({
         model,
         params: { limit, match, skip, sort },
       });
-      return res.status(200).send(documents);
+      */
+      //Pending fixing error with types of schema (dates are return as strings with a number)
+      const { data } = await GraphqlLib.findMany({
+        model,
+        params: { limit, match, skip, sort },
+        queryObject: query,
+      });
+
+      return res.status(200).send(data);
     } catch (err) {
       return res.status(500).send({ error: err });
     }

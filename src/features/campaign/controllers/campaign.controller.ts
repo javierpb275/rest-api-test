@@ -12,7 +12,16 @@ export class CampaignController {
       res,
       model: "Campaign",
       hasAuth: true,
-      filter: ["name", "search", "_id", "createdAt", "updatedAt"],
+      filter: [
+        "sort",
+        "skip",
+        "limit",
+        "name",
+        "search",
+        "_id",
+        "createdAt",
+        "updatedAt",
+      ],
     });
   // CREATE CAMPAIGN
   public static postCampaign = async (

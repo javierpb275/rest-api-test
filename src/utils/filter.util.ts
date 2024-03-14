@@ -1,7 +1,15 @@
 import { ModelType } from "../types";
 
+// PENDING HANDLING ERRORS IN SET METHODS WHEN THE TYPES PASSED ARE NOT THE SAME AS EXPECTED...
 export class FilterUtil {
-  private static getFilteredHeaders = (
+  private static filterPagination = (allowedProperties: string[]): string[] => {
+    const filteredKeys: string[] = allowedProperties.filter((key) => {
+      return key !== "sort" && key !== "skip" && key !== "limit";
+    });
+    return filteredKeys;
+  };
+
+  public static getFilteredHeaders = (
     headers: any,
     allowedProperties: string[]
   ) => {
@@ -72,7 +80,11 @@ export class FilterUtil {
     headers: any,
     allowedProperties: string[]
   ) => {
-    const filteredHeaders = this.getFilteredHeaders(headers, allowedProperties);
+    const filteredPagination = this.filterPagination(allowedProperties);
+    const filteredHeaders = this.getFilteredHeaders(
+      headers,
+      filteredPagination
+    );
     const match: any = {};
     this.setSearch(match, filteredHeaders);
     this.setDefaultValues(match, filteredHeaders);

@@ -1,47 +1,43 @@
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { graphql } from "graphql";
-import { FindManyParams } from "../types";
+import { CreateOneParams, FindManyParams, ModelType } from "../types";
 import { MongooseLib } from "./mongoose.lib";
 
 type ModelProperties = {
   [key: string]: string; // Property name and its type
 };
 
-interface GetDataMethod extends FindManyParams {
+interface GetManyMethod extends FindManyParams {
   queryObject: any;
 }
 
-type ApiCallMethod =
-  | "getOne"
-  | "getMany"
-  | "postOne"
-  | "postMany"
-  | "patchOne"
-  | "patchMany"
-  | "putOne"
-  | "putMany"
-  | "deleteOne"
-  | "deleteMany";
+interface PostOneMethod extends CreateOneParams {
+  queryObject: any;
+}
+
+interface GetQueryAndSchemaParams {
+  model: ModelType;
+  queryObject: any;
+  isArray: boolean;
+}
+
+interface GqlApiCallParams extends GetQueryAndSchemaParams {
+  resolvers: any;
+}
 
 export class GraphqlLib {
-  public static getData = async ({
+  public static getMany = async ({
     model,
     params,
     queryObject,
-  }: GetDataMethod) => {
+  }: GetManyMethod) => {
     try {
-      const query = GraphqlLib.getQuery(model, queryObject);
-      const schema = GraphqlLib.getSchema(model);
-      const resolvers = GraphqlLib.getResolvers({ model, params });
-
-      const schemaWithResolvers = makeExecutableSchema({
-        typeDefs: schema,
+      const resolvers = GraphqlLib.getManyResolvers({ model, params });
+      const { data, errors } = await GraphqlLib.apiCall({
+        model,
+        queryObject,
+        isArray: true,
         resolvers,
-      });
-
-      const { data, errors } = await graphql({
-        schema: schemaWithResolvers,
-        source: query,
       });
       return {
         data,
@@ -52,19 +48,71 @@ export class GraphqlLib {
     }
   };
 
-  private static getResolvers = (
-    { model, params }: FindManyParams,
-    method: ApiCallMethod = "getMany"
-  ) => {
+  public static postOne = async ({
+    model,
+    body,
+    queryObject,
+  }: PostOneMethod) => {
+    try {
+      const resolvers = GraphqlLib.postOneResolvers({ model, body });
+      const { data, errors } = await GraphqlLib.apiCall({
+        model,
+        queryObject,
+        isArray: false,
+        resolvers,
+      });
+      return {
+        data,
+        errors,
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  private static apiCall = async ({
+    isArray,
+    model,
+    queryObject,
+    resolvers,
+  }: GqlApiCallParams) => {
+    const { query, schema } = GraphqlLib.getQueryAndSchema({
+      model,
+      queryObject,
+      isArray,
+    });
+    const schemaWithResolvers = makeExecutableSchema({
+      typeDefs: schema,
+      resolvers,
+    });
+    const { data, errors } = await graphql({
+      schema: schemaWithResolvers,
+      source: query,
+    });
+    return {
+      data,
+      errors,
+    };
+  };
+
+  private static getQueryAndSchema = ({
+    model,
+    queryObject,
+    isArray,
+  }: GetQueryAndSchemaParams) => {
+    const query = GraphqlLib.getQuery(model, queryObject);
+    const schema = GraphqlLib.getSchema(model, isArray);
+    return { query, schema };
+  };
+
+  private static getManyResolvers = ({ model, params }: FindManyParams) => {
     const resolvers = {
       Query: {
         data: async () => {
-          if (method === "getMany") {
-            try {
-              return await MongooseLib.findMany({ model, params });
-            } catch (error) {
-              throw new Error(`Failed to fetch data`);
-            }
+          try {
+            return await MongooseLib.findMany({ model, params });
+          } catch (error) {
+            throw new Error(`Failed to fetch ${model.toLowerCase()}s`);
           }
         },
       },
@@ -72,10 +120,22 @@ export class GraphqlLib {
     return resolvers;
   };
 
-  private static getSchema = (
-    model: string,
-    isArray: boolean = true
-  ): string => {
+  private static postOneResolvers = ({ model, body }: CreateOneParams) => {
+    const resolvers = {
+      Query: {
+        data: async () => {
+          try {
+            return await MongooseLib.createOne({ model, body });
+          } catch (error) {
+            throw new Error(`Failed to create ${model}`);
+          }
+        },
+      },
+    };
+    return resolvers;
+  };
+
+  private static getSchema = (model: string, isArray: boolean): string => {
     try {
       let schema = GraphqlLib.chooseSchema(model);
       const returnType = isArray ? `[${model}!]!` : `${model}!`;

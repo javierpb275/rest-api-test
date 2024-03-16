@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { IUser, UserModel } from "../features/user";
-import { GraphqlLib, MongooseLib } from "../libs";
+import { GraphqlLib } from "../libs";
 import { CrudParams, ModelType } from "../types";
 import { AuthUtil } from "./auth.util";
 import { FilterUtil } from "./filter.util";
@@ -44,14 +44,7 @@ export class CrudUtil {
           return res.status(404).send({ error: "User Not Found!" });
         }
       }
-      /*
-      const documents = await MongooseLib.findMany({
-        model,
-        params: { limit, match, skip, sort },
-      });
-      */
-      //Pending fixing error with types of schema (dates are return as strings with a number)
-      const { data } = await GraphqlLib.getData({
+      const { data } = await GraphqlLib.getMany({
         model,
         params: { limit, match, skip, sort },
         queryObject: query,
@@ -68,7 +61,7 @@ export class CrudUtil {
     model,
     hasAuth = false,
   }: CrudParams): Promise<Response> => {
-    const { userId, body } = AuthUtil.castRequest(req);
+    const { userId, body, query } = AuthUtil.castRequest(req);
     let user: IUser | null = null;
     try {
       if (hasAuth) {
@@ -78,7 +71,11 @@ export class CrudUtil {
         }
       }
       this.extraSteps(model, "postOne", body, { userId: user?._id });
-      const document = await MongooseLib.createOne({ model, body });
+      const document = await GraphqlLib.postOne({
+        model,
+        body,
+        queryObject: query,
+      });
       return res.status(201).send(document);
     } catch (err) {
       return res.status(400).send({ error: err });

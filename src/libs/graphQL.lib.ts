@@ -1,12 +1,5 @@
-import {
-    GraphQLError,
-    GraphQLScalarType,
-    GraphQLSchema,
-    Kind,
-    buildSchema,
-    graphql,
-} from "graphql";
-import { makeExecutableSchema } from "graphql-tools";
+import { makeExecutableSchema } from "@graphql-tools/schema";
+import { graphql } from "graphql";
 import { FindManyParams } from "../types";
 import { MongooseLib } from "./mongoose.lib";
 
@@ -14,20 +7,32 @@ type ModelProperties = {
   [key: string]: string; // Property name and its type
 };
 
-interface FindManyMethod extends FindManyParams {
+interface GetDataMethod extends FindManyParams {
   queryObject: any;
 }
 
+type ApiCallMethod =
+  | "getOne"
+  | "getMany"
+  | "postOne"
+  | "postMany"
+  | "patchOne"
+  | "patchMany"
+  | "putOne"
+  | "putMany"
+  | "deleteOne"
+  | "deleteMany";
+
 export class GraphqlLib {
-  public static findMany = async ({
+  public static getData = async ({
     model,
     params,
     queryObject,
-  }: FindManyMethod) => {
+  }: GetDataMethod) => {
     try {
-      const query = GraphqlLib.getFindManyQuery(model, queryObject);
-      const schema = GraphqlLib.getFindManySchema(model);
-      const resolvers = GraphqlLib.getFindManyResolvers({ model, params });
+      const query = GraphqlLib.getQuery(model, queryObject);
+      const schema = GraphqlLib.getSchema(model);
+      const resolvers = GraphqlLib.getResolvers({ model, params });
 
       const schemaWithResolvers = makeExecutableSchema({
         typeDefs: schema,
@@ -47,14 +52,19 @@ export class GraphqlLib {
     }
   };
 
-  private static getFindManyResolvers = ({ model, params }: FindManyParams) => {
+  private static getResolvers = (
+    { model, params }: FindManyParams,
+    method: ApiCallMethod = "getMany"
+  ) => {
     const resolvers = {
       Query: {
-        [model.toLowerCase() + "s"]: async () => {
-          try {
-            return await MongooseLib.findMany({ model, params });
-          } catch (error) {
-            throw new Error(`Failed to fetch ${model.toLowerCase() + "s"}`);
+        data: async () => {
+          if (method === "getMany") {
+            try {
+              return await MongooseLib.findMany({ model, params });
+            } catch (error) {
+              throw new Error(`Failed to fetch data`);
+            }
           }
         },
       },
@@ -62,29 +72,33 @@ export class GraphqlLib {
     return resolvers;
   };
 
-  private static getFindManySchema = (model: string): GraphQLSchema => {
+  private static getSchema = (
+    model: string,
+    isArray: boolean = true
+  ): string => {
     try {
       let schema = GraphqlLib.chooseSchema(model);
+      const returnType = isArray ? `[${model}!]!` : `${model}!`;
       const schemaString = `
-      type ${model} {
-        ${Object.entries(schema)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join("\n")}
-      }
+        scalar DateTime
+        
+        type ${model} {
+          ${Object.entries(schema)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join("\n")}
+        }
 
-      type Query {
-        ${model.toLowerCase()}s(${GraphqlLib.formatSchema(
-        schema
-      )}): [${model}!]!
-      }
-    `;
-      return buildSchema(schemaString);
+        type Query {
+          data(${GraphqlLib.formatSchema(schema)}): ${returnType}
+        }
+      `;
+      return schemaString;
     } catch (error) {
       throw error;
     }
   };
 
-  private static getFindManyQuery = (
+  private static getQuery = (
     model: string,
     queryObject: ModelProperties
   ): string => {
@@ -95,7 +109,7 @@ export class GraphqlLib {
     const fields = keys.join("\n");
     return `
       query {
-        ${model.toLowerCase()}s {
+        data {
           ${fields}
         }
       }
@@ -109,103 +123,8 @@ export class GraphqlLib {
       .join(", ");
   };
 
-  private static ObjectType = new GraphQLScalarType({
-    name: "Object",
-    description: "Custom scalar type representing an object",
-
-    parseValue(value: any) {
-      if (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value)
-      ) {
-        return value;
-      }
-      throw new Error("Invalid object format");
-    },
-
-    serialize(value: any) {
-      if (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value)
-      ) {
-        return value;
-      }
-      throw new Error("Invalid object format");
-    },
-
-    parseLiteral(ast: any) {
-      if (ast.kind === Kind.OBJECT) {
-        return ast.value;
-      }
-      throw new GraphQLError("Invalid object format", [ast]);
-    },
-  });
-
-  private static DateType = new GraphQLScalarType({
-    name: "DateTime",
-    description: "ISO-8601 formatted date string",
-    parseValue(value: any) {
-      // Parse value from the client
-      const date = new Date(value);
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid date format");
-      }
-      return date;
-    },
-    serialize(value: any) {
-      // Serialize value to send to the client
-      if (!(value instanceof Date)) {
-        throw new Error("DateTime cannot represent non-Date type");
-      }
-      return value.toISOString();
-    },
-    parseLiteral(ast) {
-      if (ast.kind === Kind.STRING) {
-        // Parse date string from AST
-        const date = new Date(ast.value);
-        if (isNaN(date.getTime())) {
-          throw new GraphQLError("Invalid date format", [ast]);
-        }
-        return date;
-      }
-      return null; // Invalid AST
-    },
-  });
-
-  private static NumberType = new GraphQLScalarType({
-    name: "Number",
-    description: "Int or Float scalar type",
-
-    parseValue(value: any) {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return Number.isInteger(value)
-          ? parseInt(value.toString())
-          : parseFloat(value.toString());
-      }
-      throw new Error("Invalid number format");
-    },
-
-    serialize(value: any) {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return Number.isInteger(value)
-          ? parseInt(value.toString())
-          : parseFloat(value.toString());
-      }
-      throw new Error("Invalid number format");
-    },
-
-    parseLiteral(ast) {
-      if (ast.kind === Kind.INT || ast.kind === Kind.FLOAT) {
-        return parseFloat(ast.value);
-      }
-      throw new GraphQLError("Invalid number format", [ast]);
-    },
-  });
-
-  private static chooseSchema = (model: string): any => {
-    let schema = {};
+  private static chooseSchema = (model: string): ModelProperties => {
+    let schema: ModelProperties = {};
     if (model === "User") {
       schema = GraphqlLib.USER_SCHEMA;
     } else if (model === "Campaign") {
@@ -214,21 +133,20 @@ export class GraphqlLib {
     return schema;
   };
 
-  // PENDING FINDING OUT HOW TO CREATE TYPES (a data type for createdAt for example)
-  private static DEFAULT_SCHEMA = {
+  private static DEFAULT_SCHEMA: ModelProperties = {
     _id: "ID",
-    createdAt: "String",
-    updatedAt: "String",
+    createdAt: "DateTime",
+    updatedAt: "DateTime",
   };
 
-  private static USER_SCHEMA = {
+  private static USER_SCHEMA: ModelProperties = {
     ...GraphqlLib.DEFAULT_SCHEMA,
     username: "String",
     email: "String",
   };
-  private static CAMPAIGN_SCHEMA = {
+  private static CAMPAIGN_SCHEMA: ModelProperties = {
     ...GraphqlLib.DEFAULT_SCHEMA,
     name: "String",
-    user: "String",
+    user: "ID",
   };
 }

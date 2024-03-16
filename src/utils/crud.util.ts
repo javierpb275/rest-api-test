@@ -51,7 +51,7 @@ export class CrudUtil {
       });
       */
       //Pending fixing error with types of schema (dates are return as strings with a number)
-      const { data } = await GraphqlLib.findMany({
+      const { data } = await GraphqlLib.getData({
         model,
         params: { limit, match, skip, sort },
         queryObject: query,

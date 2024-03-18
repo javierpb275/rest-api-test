@@ -49,8 +49,14 @@ export class CrudUtil {
         params: { limit, match, skip, sort },
         queryObject: query,
       });
-
-      return res.status(200).send(data);
+      const result = data as any;
+      return res.status(200).send({
+        data: result.data,
+        message: `Got ${
+          result.data.length
+        } ${model.toLowerCase()}s successfully`,
+        status: 200,
+      });
     } catch (err) {
       return res.status(500).send({ error: err });
     }
@@ -71,12 +77,17 @@ export class CrudUtil {
         }
       }
       this.extraSteps(model, "postOne", body, { userId: user?._id });
-      const document = await GraphqlLib.postOne({
+      const { data } = await GraphqlLib.postOne({
         model,
         body,
         queryObject: query,
       });
-      return res.status(201).send(document);
+      const result = data as any;
+      return res.status(201).send({
+        data: result.data,
+        message: `${model} created successfully`,
+        status: 201,
+      });
     } catch (err) {
       return res.status(400).send({ error: err });
     }
